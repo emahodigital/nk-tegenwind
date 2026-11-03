@@ -1,0 +1,37 @@
+name: Windcheck
+
+on:
+  schedule:
+    - cron: "0 6 * * *"    # 07.00 uur (winter), elke dag
+    - cron: "0 12 * * *"   # 13.00 uur, alleen werk in stormstand
+    - cron: "0 18 * * *"   # 19.00 uur, alleen werk in stormstand
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "run (nu rekenen) of test (testmelding)"
+        default: run
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q requests pywebpush
+      - name: Rekenen en melden
+        env:
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          PUSH_SUBSCRIPTIONS: ${{ secrets.PUSH_SUBSCRIPTIONS }}
+        run: python engine/check.py ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'scheduled' }}
+      - name: Opslaan
+        run: |
+          git config user.name "nk-tegenwind-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/data.json engine/state.json
+          git diff --cached --quiet || git commit -m "Windverwachting bijgewerkt"
+          git push
