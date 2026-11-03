@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NK Tegenwind</title>
+<meta name="theme-color" content="#f4f7fa">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NK Tegenwind">
+<style>
+  :root { --bg:#f4f7fa; --card:#fff; --ink:#14202b; --muted:#66727f; --line:#e3e8ee;
+          --nk:#1f6feb; --weer:#b9d3f7; --hot:#d9480f; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+         background:var(--bg); color:var(--ink); padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+  main { max-width:560px; margin:0 auto; padding:20px 16px 40px; }
+  h1 { font-size:22px; margin:4px 0 2px; letter-spacing:-.01em; }
+  .sub { color:var(--muted); font-size:14px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin-top:16px; }
+  .big { font-size:56px; font-weight:700; line-height:1; letter-spacing:-.03em; }
+  .big.hot { color:var(--hot); }
+  .row { display:grid; grid-template-columns:92px 1fr 44px; gap:10px; align-items:center;
+         padding:9px 0; border-top:1px solid var(--line); cursor:pointer; }
+  .row:first-of-type { border-top:0; }
+  .day { font-size:14px; }
+  .day b { display:block; font-size:15px; }
+  .we { color:var(--nk); }
+  .bar { position:relative; height:22px; background:#eef2f6; border-radius:6px; overflow:hidden; }
+  .bar i { position:absolute; left:0; top:0; bottom:0; border-radius:6px; }
+  .bar .w { background:var(--weer); }
+  .bar .n { background:var(--nk); }
+  .pct { text-align:right; font-weight:650; font-variant-numeric:tabular-nums; }
+  .detail { grid-column:1/-1; font-size:14px; color:var(--muted); display:none; padding:2px 0 4px; }
+  .row.open .detail { display:block; }
+  .legend { display:flex; gap:16px; font-size:13px; color:var(--muted); margin-top:10px; }
+  .legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:3px;
+                         margin-right:6px; vertical-align:-1px; background:var(--c); }
+  button { font:inherit; font-weight:600; border:0; border-radius:12px; padding:13px 16px; width:100%;
+           background:var(--nk); color:#fff; cursor:pointer; }
+  button.ghost { background:#e8eff8; color:var(--nk); margin-top:8px; }
+  textarea { width:100%; height:110px; margin-top:10px; font:12px/1.4 ui-monospace, Menlo, monospace;
+             border:1px solid var(--line); border-radius:10px; padding:10px; background:#fafcfe; color:var(--ink); }
+  .hide { display:none !important; }
+  .pill { display:inline-block; font-size:12px; font-weight:600; padding:3px 9px; border-radius:99px;
+          background:#fff1e8; color:var(--hot); margin-left:6px; vertical-align:2px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>NK Tegenwind <span id="storm" class="pill hide">stormstand</span></h1>
+  <div class="sub" id="updated">Laden…</div>
+
+  <section class="card" id="topcard">
+    <div class="sub">Hoogste kans dat het NK doorgaat</div>
+    <div class="big" id="topPct">–</div>
+    <div id="topDay" class="sub"></div>
+  </section>
+
+  <section class="card">
+    <div id="list"></div>
+    <div class="legend">
+      <span style="--c:var(--nk)">Kans dat het NK doorgaat</span>
+      <span style="--c:var(--weer)">Weerkans</span>
+    </div>
+  </section>
+
+  <section class="card" id="push">
+    <button id="enable">Meldingen aan</button>
+    <button id="test" class="ghost hide">Testmelding op dit toestel</button>
+    <div id="iosHint" class="sub hide" style="margin-top:10px">Op iPhone: deel-knop, Zet op beginscherm, en open NK Tegenwind vanaf daar.</div>
+    <div id="codeBox" class="hide">
+      <div class="sub" style="margin-top:12px">Jouw toestelcode</div>
+      <textarea id="code" readonly></textarea>
+      <button id="copy" class="ghost">Kopieer code</button>
+    </div>
+  </section>
+</main>
+
+<script>
+const VAPID_PUBLIC = "BLRz0c47wljK-arB1G-e1tB8_58RurStkT2UDOxUN0y6HInjPF4rqs18xE29eq66LiXXyYahWXc3jw7I33embu8";
+const DAGEN = ["zo","ma","di","wo","do","vr","za"];
+const MAANDEN = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"];
+const $ = id => document.getElementById(id);
+
+function fmt(iso) {
+  const d = new Date(iso + "T12:00:00");
+  return { dag: DAGEN[d.getDay()], datum: d.getDate() + " " + MAANDEN[d.getMonth()], we: d.getDay() % 6 === 0 };
+}
+
+async function load() {
+  try {
+    const data = await fetch("data.json?" + Date.now()).then(r => r.json());
+    const u = new Date(data.updated);
+    $("updated").textContent = "Bijgewerkt " + u.toLocaleString("nl-NL", { weekday:"long", hour:"2-digit", minute:"2-digit" })
+      + (data.in_season ? "" : " · buiten seizoen") + (data.held ? " · NK dit seizoen al verreden" : "");
+    $("storm").classList.toggle("hide", !data.storm_mode);
+    const days = data.days.filter(d => d.date >= new Date().toISOString().slice(0,10));
+    const top = days.reduce((a, b) => (b.nk > a.nk ? b : a), days[0]);
+    $("topPct").textContent = top.nk + "%";
+    $("topPct").classList.toggle("hot", top.nk >= 50);
+    const t = fmt(top.date);
+    $("topDay").textContent = top.nk >= 5 ? `${t.dag} ${t.datum}, wind rond ${String(top.wind_med).replace('.', ',')} m/s` : "Geen storm in zicht voor de komende 2 weken";
+    $("list").innerHTML = days.map(d => {
+      const f = fmt(d.date);
+      return `<div class="row" onclick="this.classList.toggle('open')">
+        <div class="day"><b class="${f.we ? "we" : ""}">${f.dag}</b>${f.datum}</div>
+        <div class="bar"><i class="w" style="width:${d.weer}%"></i><i class="n" style="width:${d.nk}%"></i></div>
+        <div class="pct">${d.nk}%</div>
+        <div class="detail">Weerkans ${d.weer}% · gemiddelde wind ${String(d.wind_med).replace('.', ',')} m/s, in de stormachtigste 10% van de modellen ${String(d.wind_p90).replace('.', ',')} m/s</div>
+      </div>`;
+    }).join("");
+  } catch (e) {
+    $("updated").textContent = "Nog geen gegevens beschikbaar.";
+  }
+}
+
+function b64ToBytes(s) {
+  const p = "=".repeat((4 - s.length % 4) % 4);
+  const raw = atob((s + p).replace(/-/g, "+").replace(/_/g, "/"));
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+async function showCode(sub) {
+  $("code").value = JSON.stringify(sub);
+  $("codeBox").classList.remove("hide");
+  $("test").classList.remove("hide");
+  $("enable").textContent = "Meldingen staan aan";
+}
+
+async function setupPush() {
+  const isIOS = /iPhone|iPad/.test(navigator.userAgent);
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    $("enable").disabled = true;
+    if (isIOS && !standalone) $("iosHint").classList.remove("hide");
+    else $("enable").textContent = "Meldingen niet beschikbaar in deze browser";
+    return;
+  }
+  const reg = await navigator.serviceWorker.register("sw.js");
+  const existing = await reg.pushManager.getSubscription();
+  if (existing) showCode(existing);
+  $("enable").onclick = async () => {
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") { $("enable").textContent = "Meldingen geweigerd in instellingen"; return; }
+    const sub = existing || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(VAPID_PUBLIC) });
+    showCode(sub);
+  };
+  $("test").onclick = () => reg.showNotification("NK Tegenwind", { body: "Meldingen werken op dit toestel.", icon: "icon-192.png" });
+  $("copy").onclick = () => { navigator.clipboard.writeText($("code").value); $("copy").textContent = "Gekopieerd"; };
+}
+
+load();
+setupPush();
+</script>
+</body>
+</html>
