@@ -114,6 +114,8 @@ def analyse(h):
 
 def send_push(title, body, tag):
     subs = json.loads(os.environ.get("PUSH_SUBSCRIPTIONS", "[]") or "[]")
+    if isinstance(subs, dict):
+        subs = [subs]
     key = os.environ.get("VAPID_PRIVATE_KEY")
     if not subs or not key:
         print("Geen abonnement of sleutel, melding overgeslagen:", title)
