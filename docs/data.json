@@ -1,1 +1,128 @@
-{"updated":"2026-11-03T19:05","storm_mode":false,"in_season":true,"held":false,"days":[]}
+{
+ "updated": "2026-11-03T19:44+01:00",
+ "storm_mode": false,
+ "in_season": true,
+ "held": false,
+ "days": [
+  {
+   "date": "2026-11-03",
+   "weer": 0,
+   "nk": 0,
+   "wind_med": 5.9,
+   "wind_p90": 6.4,
+   "leden": 51
+  },
+  {
+   "date": "2026-11-04",
+   "weer": 0,
+   "nk": 0,
+   "wind_med": 5.9,
+   "wind_p90": 6.7,
+   "leden": 51
+  },
+  {
+   "date": "2026-11-05",
+   "weer": 0,
+   "nk": 0,
+   "wind_med": 4.7,
+   "wind_p90": 5.4,
+   "leden": 51
+  },
+  {
+   "date": "2026-11-06",
+   "weer": 0,
+   "nk": 0,
+   "wind_med": 2.7,
+   "wind_p90": 3.3,
+   "leden": 51
+  },
+  {
+   "date": "2026-11-07",
+   "weer": 0,
+   "nk": 0,
+   "wind_med": 2.1,
+   "wind_p90": 2.9,
+   "leden": 51
+  },
+  {
+   "date": "2026-11-08",
+   "weer": 0,
+   "nk": 0,
+   "wind_med": 3.1,
+   "wind_p90": 4.3,
+   "leden": 51
+  },
+  {
+   "date": "2026-11-09",
+   "weer": 0,
+   "nk": 0,
+   "wind_med": 2.2,
+   "wind_p90": 3.5,
+   "leden": 51
+  },
+  {
+   "date": "2026-11-10",
+   "weer": 0,
+   "nk": 0,
+   "wind_med": 4.6,
+   "wind_p90": 5.4,
+   "leden": 51
+  },
+  {
+   "date": "2026-11-11",
+   "weer": 0,
+   "nk": 0,
+   "wind_med": 3.8,
+   "wind_p90": 5.9,
+   "leden": 51
+  },
+  {
+   "date": "2026-11-12",
+   "weer": 0,
+   "nk": 0,
+   "wind_med": 4.3,
+   "wind_p90": 6.4,
+   "leden": 51
+  },
+  {
+   "date": "2026-11-13",
+   "weer": 0,
+   "nk": 0,
+   "wind_med": 4.0,
+   "wind_p90": 6.2,
+   "leden": 51
+  },
+  {
+   "date": "2026-11-14",
+   "weer": 0,
+   "nk": 0,
+   "wind_med": 3.5,
+   "wind_p90": 5.6,
+   "leden": 51
+  },
+  {
+   "date": "2026-11-15",
+   "weer": 0,
+   "nk": 0,
+   "wind_med": 3.6,
+   "wind_p90": 6.1,
+   "leden": 51
+  },
+  {
+   "date": "2026-11-16",
+   "weer": 0,
+   "nk": 0,
+   "wind_med": 3.0,
+   "wind_p90": 4.9,
+   "leden": 51
+  },
+  {
+   "date": "2026-11-17",
+   "weer": 0,
+   "nk": 0,
+   "wind_med": 3.9,
+   "wind_p90": 6.6,
+   "leden": 51
+  }
+ ]
+}
