@@ -27,6 +27,9 @@ NE_WEIGHT = 0.3                 # noord/noordoost mag, maar kwam nooit voor
 WEEKDAY_FACTOR = 0.6            # 4 van 5 edities in het weekend
 NOTIFY_AT = 50                  # procent kans dat het NK doorgaat
 STORM_MODE_AT = 25              # weerkans waarbij we 3x per dag rekenen
+KERING_FACTOR = 1.16            # modelwind naar wind op de kering (12 m/s model = windkracht 7)
+BFT_EDGES = [0.3, 1.6, 3.4, 5.5, 8.0, 10.8, 13.9, 17.2, 20.8, 24.5, 28.5, 32.7]
+RICHTINGEN = ["N", "NNO", "NO", "ONO", "O", "OZO", "ZO", "ZZO", "Z", "ZZW", "ZW", "WZW", "W", "WNW", "NW", "NNW"]
 MODELS = "ecmwf_ifs025"           # alleen ECMWF: het beste model, 51 varianten, 15 dagen vooruit
 
 
@@ -52,6 +55,10 @@ def circ_mean(degrees):
     cx = sum(math.cos(math.radians(v)) for v in degrees)
     a = math.degrees(math.atan2(sx, cx))
     return a + 360 if a < 0 else a
+
+
+def beaufort(ms):
+    return sum(1 for e in BFT_EDGES if ms >= e)
 
 
 def direction_weight(deg):
@@ -81,6 +88,7 @@ def analyse(h):
         d = date.fromisoformat(times[start][:10])
         per_model = {}
         means = []
+        dirs = []
         for suf in members:
             idx = [start + hr for hr in WINDOW]
             ws = [h["wind_speed_10m" + suf][i] for i in idx]
@@ -91,6 +99,7 @@ def analyse(h):
             model = suf.split("_", 2)[-1] if "member" in suf else suf.lstrip("_")
             mean = sum(ws) / len(ws)
             means.append(mean)
+            dirs.append(circ_mean(wd))
             hit = 0.0
             if mean >= MIN_MEAN and max(wg) < MAX_GUST:
                 hit = direction_weight(circ_mean(wd))
@@ -101,6 +110,7 @@ def analyse(h):
         factor = 1.0 if d.weekday() >= 5 else WEEKDAY_FACTOR
         nk = weer * factor if in_season(d) else 0.0
         means.sort()
+        richting = round(circ_mean(dirs))
         days.append({
             "date": d.isoformat(),
             "weer": round(weer * 100),
@@ -108,6 +118,10 @@ def analyse(h):
             "wind_med": round(means[len(means) // 2], 1),
             "wind_p90": round(means[int(len(means) * 0.9) - 1], 1),
             "leden": sum(len(v) for v in per_model.values()),
+            "bft": beaufort(means[len(means) // 2] * KERING_FACTOR),
+            "bft_p90": beaufort(means[int(len(means) * 0.9) - 1] * KERING_FACTOR),
+            "dir": richting % 360,
+            "dir_label": RICHTINGEN[round(richting / 22.5) % 16],
         })
     return days
 
