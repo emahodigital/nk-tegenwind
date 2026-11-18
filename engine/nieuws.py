@@ -110,6 +110,8 @@ def fetch_site():
     except requests.exceptions.SSLError:
         r = requests.get(SITE_URL.replace("https://", "http://"), headers=UA, timeout=20)
     r.raise_for_status()
+    titel = re.search(r"<title[^>]*>(.*?)</title>", r.text, re.S | re.I)
+    print("Officiele site, titel:", clean(titel.group(1)) if titel else "geen", "| lengte", len(r.text))
     text = clean(re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", r.text, flags=re.S | re.I))
     links = sorted(set(re.findall(r'https?://(?:www\.)?inschrijven\.nl/[^"\'\s<>]+', r.text)))
     return text, links
@@ -139,7 +141,7 @@ def main():
         return
 
     changed = False
-    eerste = not ns["seen"]  # eerste run: bestaande artikelen alleen onthouden, niet melden
+    eerste = not ns.get("initialized")  # eerste run: bestaande artikelen alleen onthouden, niet melden
 
     # 1. Nieuws
     try:
@@ -169,6 +171,7 @@ def main():
                 send_push("NK Tegenwind: afgelast of uitgesteld", it["title"], "inschrijving", it["link"])
             elif soort == "aankondiging" or watching:
                 send_push("NK Tegenwind: nieuws", f"{it['title']} ({it['bron']})", "nieuws", it["link"])
+        ns["initialized"] = True
     except Exception as e:
         print("Nieuws niet opgehaald:", e)
 
