@@ -26,6 +26,7 @@ SW_SECTOR = (165, 265)          # zuid tot west, waar alle edities vielen
 NE_WEIGHT = 0.3                 # noord/noordoost mag, maar kwam nooit voor
 WEEKDAY_FACTOR = 0.6            # 4 van 5 edities in het weekend
 NOTIFY_AT = 50                  # procent kans dat het NK doorgaat
+WATCH_AT = 40                   # vanaf deze kans let de nieuwsmelder elke 15 minuten op
 STORM_MODE_AT = 25              # weerkans waarbij we 3x per dag rekenen
 KERING_FACTOR = 1.16            # modelwind naar wind op de kering (12 m/s model = windkracht 7)
 BFT_EDGES = [0.3, 1.6, 3.4, 5.5, 8.0, 10.8, 13.9, 17.2, 20.8, 24.5, 28.5, 32.7]
@@ -126,7 +127,7 @@ def analyse(h):
     return days
 
 
-def send_push(title, body, tag):
+def send_push(title, body, tag, url=None):
     subs = json.loads(os.environ.get("PUSH_SUBSCRIPTIONS", "[]") or "[]")
     if isinstance(subs, dict):
         subs = [subs]
@@ -135,7 +136,7 @@ def send_push(title, body, tag):
         print("Geen abonnement of sleutel, melding overgeslagen:", title)
         return
     from pywebpush import webpush, WebPushException
-    payload = json.dumps({"title": title, "body": body, "tag": tag})
+    payload = json.dumps({"title": title, "body": body, "tag": tag, "url": url})
     for sub in subs:
         try:
             webpush(sub, payload, vapid_private_key=key,
@@ -175,6 +176,16 @@ def main():
 
     state["storm_mode"] = any(d["weer"] >= STORM_MODE_AT for d in days)
 
+    # Waakstand voor de inschrijving: een kansrijke dag binnen 5 dagen.
+    kansrijk = [d for d in days if d["nk"] >= WATCH_AT and 0 <= (date.fromisoformat(d["date"]) - now.date()).days <= 5]
+    if kansrijk:
+        top = max(kansrijk, key=lambda x: x["nk"])
+        storm = date.fromisoformat(top["date"])
+        state["watch"] = {"until": top["date"], "stormday": top["date"], "kans": top["nk"],
+                          "van": (storm - timedelta(days=3)).isoformat(), "tot": (storm - timedelta(days=2)).isoformat()}
+    else:
+        state["watch"] = None
+
     # Meldingen: eenmalig per dag zodra de kans 50% haalt, en bij een flinke daling.
     notified = {k: v for k, v in state.get("notified", {}).items() if k >= now.date().isoformat()}
     for d in days:
@@ -183,7 +194,8 @@ def main():
             dagen_vooruit = (date.fromisoformat(d["date"]) - now.date()).days
             send_push(f"NK Tegenwind: {d['nk']}% kans",
                       f"{nl_date(d['date']).capitalize()}, over {dagen_vooruit} dagen. "
-                      f"Wind rond {str(d['wind_med']).replace('.', ',')} m/s. De inschrijving opent meestal 2 tot 3 dagen vooraf.",
+                      f"{d.get('bft', '?')} Bft {d.get('dir_label', '')}. Aankondiging en inschrijving verwacht rond "
+                      f"{nl_date((date.fromisoformat(d['date']) - timedelta(days=2)).isoformat())}.",
                       d["date"])
             notified[d["date"]] = d["nk"]
         elif prev is not None and d["nk"] < 30 and prev >= NOTIFY_AT:
@@ -202,6 +214,7 @@ def main():
 
     save(DATA, {"updated": now.isoformat(timespec="minutes"), "storm_mode": state["storm_mode"],
                 "in_season": in_season(now.date()), "held": state.get("held_season") == season,
+                "watch": state.get("watch"),
                 "days": days})
     save(STATE, state)
     print(json.dumps(days[:5]))

@@ -77,6 +77,15 @@
   button:disabled { opacity:.6; }
   textarea { width:100%; height:96px; margin-top:10px; font:11.5px/1.4 ui-monospace, Menlo, monospace;
              border:1px solid var(--line); border-radius:12px; padding:10px; background:#f7fafc; color:var(--ink); }
+  .ins { padding:14px 16px 16px; }
+  .ins .head2 { display:flex; align-items:center; gap:10px; }
+  .ins .ico { width:36px; height:36px; border-radius:10px; background:#e6eff4; display:grid; place-items:center; flex:none; }
+  .ins.live .ico { background:var(--signal-soft); }
+  .ins b.t { font-size:15.5px; display:block; }
+  .news { margin-top:10px; border-top:1px solid var(--line); }
+  .news a { display:block; padding:9px 0; border-bottom:1px solid var(--line); color:var(--ink); text-decoration:none; font-size:14px; }
+  .news a small { display:block; color:var(--muted); font-size:12px; margin-top:2px; }
+  .news a.open { color:var(--signal); font-weight:650; }
   .hide { display:none !important; }
 </style>
 </head>
@@ -118,6 +127,14 @@
     </div>
   </section>
 
+  <section class="card ins" id="ins">
+    <div class="head2">
+      <div class="ico"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e4a66" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
+      <div><b class="t" id="insTitle">Inschrijving</b><span class="sub" id="insSub"></span></div>
+    </div>
+    <div class="news" id="news"></div>
+  </section>
+
   <section class="card push" id="push">
     <button id="enable">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
@@ -140,6 +157,7 @@ const MAANDEN = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","no
 const BFT_KLEUR = ["#8fb8c9","#8fb8c9","#7fb3c6","#5fa8b8","#3f9aa4","#2a8c8a","#d4a017","#e8590c","#d9480f","#c92a2a","#a61e4d","#862e9c","#5f3dc4"];
 const $ = id => document.getElementById(id);
 const nl = x => String(x).replace(".", ",");
+const esc = x => String(x ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const tegenwind = deg => deg >= 165 && deg <= 265;
 
 function fmt(iso) {
@@ -163,9 +181,38 @@ function compass(deg, size, light) {
 
 function bftChip(b) { return `<span class="bft" style="background:${BFT_KLEUR[b] || BFT_KLEUR[12]}">${b} Bft</span>`; }
 
+async function loadNews(data) {
+  try {
+    const n = await fetch("nieuws.json?" + Date.now()).then(r => r.json());
+    const w = (data && data.watch) || n.watch;
+    let title = "Inschrijving", sub = "";
+    if (n.opening_at) {
+      const o = new Date(n.opening_at), f = fmt(n.opening_at.slice(0, 10));
+      title = `Inschrijving opent ${f.dag} ${f.datum} om ${String(o.getHours()).padStart(2,"0")}.${String(o.getMinutes()).padStart(2,"0")} uur`;
+      $("ins").classList.add("live");
+    } else if (w && w.van) {
+      const a = fmt(w.van), b = fmt(w.tot), s = fmt(w.stormday);
+      title = `Aankondiging verwacht ${a.dag} ${a.datum} of ${b.dag} ${b.datum}`;
+      sub = `Voor een mogelijk NK op ${s.dag} ${s.datum} (${w.kans}% kans). De melder kijkt nu elke 15 minuten.`;
+      $("ins").classList.add("live");
+    } else {
+      title = "Nog geen inschrijving in zicht";
+      sub = "Zodra er een kansrijke stormdag is, kijkt de melder elke 15 minuten naar het nieuws.";
+    }
+    sub += n.site_ok === false ? " Officiële site is nu niet bereikbaar." : "";
+    $("insTitle").textContent = title; $("insSub").textContent = sub;
+    $("news").innerHTML = (n.items || []).map(i => {
+      const d = i.pub ? new Date(i.pub).toLocaleString("nl-NL", { weekday:"short", hour:"2-digit", minute:"2-digit" }) : "";
+      const href = /^https?:\/\//.test(i.link) ? i.link : "#";
+      return `<a href="${esc(href)}" target="_blank" rel="noopener" class="${i.soort === "open" ? "open" : ""}">${esc(i.title)}<small>${esc(i.bron)} · ${d}</small></a>`;
+    }).join("");
+  } catch (e) { $("insSub").textContent = "Nog geen nieuwsgegevens."; }
+}
+
 async function load() {
   try {
     const data = await fetch("data.json?" + Date.now()).then(r => r.json());
+    loadNews(data);
     const u = new Date(data.updated);
     $("updated").textContent = "Bijgewerkt " + u.toLocaleString("nl-NL", { weekday:"long", hour:"2-digit", minute:"2-digit" })
       + (data.in_season ? "" : " · buiten seizoen") + (data.held ? " · NK dit seizoen al verreden" : "");

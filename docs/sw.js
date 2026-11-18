@@ -5,12 +5,14 @@ self.addEventListener("push", event => {
   let data = { title: "NK Tegenwind", body: "Nieuwe windverwachting." };
   try { data = event.data.json(); } catch (e) {}
   event.waitUntil(self.registration.showNotification(data.title, {
-    body: data.body, tag: data.tag, icon: "icon-192.png", badge: "icon-192.png", renotify: true
+    body: data.body, tag: data.tag, icon: "icon-192.png", badge: "icon-192.png", renotify: true, data: { url: data.url }
   }));
 });
 
 self.addEventListener("notificationclick", event => {
   event.notification.close();
+  const url = event.notification.data && event.notification.data.url;
+  if (url) { event.waitUntil(self.clients.openWindow(url)); return; }
   event.waitUntil(self.clients.matchAll({ type: "window" }).then(list => {
     for (const c of list) if ("focus" in c) return c.focus();
     return self.clients.openWindow("./");
