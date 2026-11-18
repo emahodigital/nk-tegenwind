@@ -181,7 +181,12 @@ def main():
         h = hashlib.sha1(text.encode()).hexdigest()
         if ns.get("site_ok") is not True:
             print("Officiele site is weer bereikbaar.")
-        if ns.get("site_hash") and h != ns["site_hash"]:
+        standaard = "default page" in text.lower()
+        if ns.get("site_default") and not standaard:
+            send_push("NK Tegenwind: officiele site is weer online",
+                      "Vaak een teken dat er een editie aankomt. Tik om te kijken.", "nieuws", SITE_URL)
+        ns["site_default"] = standaard
+        if ns.get("site_hash") and h != ns["site_hash"] and not standaard:
             soort = classify(text)
             moment = parse_moment(text, now)
             link = links[0] if links else SITE_URL
