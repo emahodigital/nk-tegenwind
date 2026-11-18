@@ -1,10 +1,11 @@
 {
  "seen": [],
  "items": [],
- "site_hash": "2386e08c3a225e435416749236bf7f2021c699ac",
+ "site_hash": "1192b58d86379a8e776cc2d4fc1d087a0b2965aa",
  "site_ok": true,
  "opening_at": null,
  "reminded": null,
  "opened_sent": null,
- "site_links": []
+ "site_links": [],
+ "initialized": true
 }
