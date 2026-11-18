@@ -105,7 +105,10 @@ def fetch_news():
 
 
 def fetch_site():
-    r = requests.get(SITE_URL, headers=UA, timeout=20)
+    try:
+        r = requests.get(SITE_URL, headers=UA, timeout=20)
+    except requests.exceptions.SSLError:
+        r = requests.get(SITE_URL.replace("https://", "http://"), headers=UA, timeout=20)
     r.raise_for_status()
     text = clean(re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", r.text, flags=re.S | re.I))
     links = sorted(set(re.findall(r'https?://(?:www\.)?inschrijven\.nl/[^"\'\s<>]+', r.text)))
