@@ -1,9 +1,10 @@
 {
  "seen": [],
  "items": [],
- "site_hash": null,
- "site_ok": false,
+ "site_hash": "2386e08c3a225e435416749236bf7f2021c699ac",
+ "site_ok": true,
  "opening_at": null,
  "reminded": null,
- "opened_sent": null
+ "opened_sent": null,
+ "site_links": []
 }
